@@ -5,7 +5,6 @@ import com.udacity.catpoint.application.ImagePanel;
 import com.udacity.catpoint.application.StatusListener;
 import com.udacity.catpoint.data.*;
 import com.udacity.image.service.FakeImageService;
-import junit.framework.TestCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.commons.util.ReflectionUtils;
@@ -14,9 +13,10 @@ import org.mockito.Mockito;
 import java.awt.image.BufferedImage;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-public class SecurityServiceTest extends TestCase {
+public class SecurityServiceTest {
   private FakeImageService imageService;
   private SecurityRepository securityRepository;
   private final StatusListener displayPanel = Mockito.mock(DisplayPanel.class);
@@ -24,14 +24,11 @@ public class SecurityServiceTest extends TestCase {
   private SecurityService securityService;
 
   @BeforeEach
-  public void setUp() throws Exception {
+  public void setUp() {
     this.imageService = mock(FakeImageService.class);
     this.securityRepository = mock(SecurityRepository.class);
     this.securityService = new SecurityService(this.securityRepository, this.imageService);
     this.securityService.addStatusListener(displayPanel);
-  }
-
-  public void tearDown() throws Exception {
   }
 
   @Test
@@ -57,7 +54,6 @@ public class SecurityServiceTest extends TestCase {
   @Test
   public void testSetArmingStatusWhenArmedAway() {
     var status = ArmingStatus.ARMED_AWAY;
-    var alarmStatus = AlarmStatus.ALARM;
     var mockSensor = Mockito.mock(Sensor.class);
     when(securityRepository.getSensors()).thenReturn(Set.of(mockSensor));
     securityService.setArmingStatus(status);

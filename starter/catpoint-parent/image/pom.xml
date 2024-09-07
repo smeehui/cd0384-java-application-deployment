@@ -7,10 +7,10 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>image</artifactId>
+    <artifactId>imageService</artifactId>
     <packaging>jar</packaging>
 
-    <name>image</name>
+    <name>imageService</name>
     <url>http://maven.apache.org</url>
 
     <properties>
@@ -34,5 +34,11 @@
             <version>${aws.sdk.version}</version>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.miglayout/miglayout-swing -->
+        <dependency>
+            <groupId>com.miglayout</groupId>
+            <artifactId>miglayout-swing</artifactId>
+            <version>5.0</version>
+        </dependency>
     </dependencies>
 </project>
