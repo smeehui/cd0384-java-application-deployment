@@ -103,7 +103,7 @@ public class SecurityService {
    */
   private void handleSensorActivated() {
 
-    if (securityRepository.getArmingStatus() == ArmingStatus.DISARMED) {
+    if (ArmingStatus.DISARMED.equals(getArmingStatus())) {
       return; //no problem if the system is disarmed
     }
 

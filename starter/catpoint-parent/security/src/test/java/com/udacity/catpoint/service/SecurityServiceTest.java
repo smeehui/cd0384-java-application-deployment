@@ -8,6 +8,7 @@ import com.udacity.image.service.FakeImageService;
 import junit.framework.TestCase;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.platform.commons.util.ReflectionUtils;
 import org.mockito.Mockito;
 
 import java.awt.image.BufferedImage;
@@ -38,6 +39,30 @@ public class SecurityServiceTest extends TestCase {
     var status = ArmingStatus.ARMED_HOME;
     securityService.setArmingStatus(status);
     verify(securityRepository, times(1)).setArmingStatus(status);
+  }
+
+  @Test
+  public void testSetArmingStatusWhenCatIsOnCamera() throws IllegalAccessException {
+    var status = ArmingStatus.ARMED_HOME;
+    var alarmStatus = AlarmStatus.ALARM;
+    var isCatOnCam = ReflectionUtils.findFields(securityService.getClass(), field -> field.getName().equals(
+        "isCatOnCam"), ReflectionUtils.HierarchyTraversalMode.TOP_DOWN).get(0);
+    isCatOnCam.setAccessible(true);
+    isCatOnCam.set(securityService,Boolean.TRUE);
+    securityService.setArmingStatus(status);
+    verify(securityRepository, times(1)).setArmingStatus(status);
+    verify(securityRepository, times(1)).setAlarmStatus(alarmStatus);
+  }
+
+  @Test
+  public void testSetArmingStatusWhenArmedAway() {
+    var status = ArmingStatus.ARMED_AWAY;
+    var alarmStatus = AlarmStatus.ALARM;
+    var mockSensor = Mockito.mock(Sensor.class);
+    when(securityRepository.getSensors()).thenReturn(Set.of(mockSensor));
+    securityService.setArmingStatus(status);
+    verify(securityRepository, times(1)).setArmingStatus(status);
+    verify(mockSensor,times(1)).setActive(false);
   }
 
   @Test
@@ -88,17 +113,32 @@ public class SecurityServiceTest extends TestCase {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsNoAlarm() {
+  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsNoAlarmAndNullArmingStatus() {
+    var mockSensor = new Sensor("dummy",SensorType.DOOR);
+    when(securityRepository.getArmingStatus()).thenReturn(null);
+    when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.NO_ALARM);
+    mockSensor.setActive(false);
+    securityService.changeSensorActivationStatus(mockSensor,true);
+
+    verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository,times(3)).getArmingStatus();
+    verify(securityRepository, times(0)).setAlarmStatus(AlarmStatus.PENDING_ALARM);
+    verify(displayPanel, times(0)).notify(AlarmStatus.PENDING_ALARM);
+    assertTrue(mockSensor.getActive());
+  }
+
+  @Test
+  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsNoAlarmAndArmedAway() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.NO_ALARM);
     mockSensor.setActive(false);
     securityService.changeSensorActivationStatus(mockSensor,true);
 
-    verify(securityRepository,times(1)).getArmingStatus();
+    verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository,times(2)).getArmingStatus();
     verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.PENDING_ALARM);
     verify(displayPanel, times(1)).notify(AlarmStatus.PENDING_ALARM);
-    verify(securityRepository,times(1)).updateSensor(mockSensor);
     assertTrue(mockSensor.getActive());
   }
 
@@ -109,11 +149,54 @@ public class SecurityServiceTest extends TestCase {
     mockSensor.setActive(false);
     securityService.changeSensorActivationStatus(mockSensor,true);
 
-    verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.ALARM);
-    verify(displayPanel, times(1)).notify(AlarmStatus.ALARM);
     verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository, times(0)).setAlarmStatus(AlarmStatus.ALARM);
+    verify(displayPanel, times(0)).notify(AlarmStatus.ALARM);
     assertTrue(mockSensor.getActive());
   }
+
+  @Test
+  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsPendingAlarmAndArmedHome() {
+    var mockSensor = new Sensor("dummy",SensorType.DOOR);
+    when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
+    when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
+    mockSensor.setActive(false);
+    securityService.changeSensorActivationStatus(mockSensor,true);
+
+    verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.ALARM);
+    verify(displayPanel, times(1)).notify(AlarmStatus.ALARM);
+    assertTrue(mockSensor.getActive());
+  }
+
+  @Test
+  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsPendingAlarmAndArmedAway() {
+    var mockSensor = new Sensor("dummy",SensorType.DOOR);
+    when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
+    when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
+    mockSensor.setActive(false);
+    securityService.changeSensorActivationStatus(mockSensor,true);
+
+    verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.ALARM);
+    verify(displayPanel, times(1)).notify(AlarmStatus.ALARM);
+    assertTrue(mockSensor.getActive());
+  }
+
+  @Test
+  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsAlarmAndArmedAway() {
+    var mockSensor = new Sensor("dummy",SensorType.DOOR);
+    when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.ALARM);
+    when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
+    mockSensor.setActive(false);
+    securityService.changeSensorActivationStatus(mockSensor,true);
+
+    verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository, times(0)).setAlarmStatus(AlarmStatus.ALARM);
+    verify(displayPanel, times(0)).notify(AlarmStatus.ALARM);
+    assertTrue(mockSensor.getActive());
+  }
+
 
   @Test
   public void testChangeSensorActivationStatusWhenSensorIsActiveAndArmingStatusIsPendingAlarm() {
@@ -135,16 +218,16 @@ public class SecurityServiceTest extends TestCase {
     mockSensor.setActive(true);
     securityService.changeSensorActivationStatus(mockSensor,false);
 
-    verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.PENDING_ALARM);
-    verify(displayPanel, times(1)).notify(AlarmStatus.PENDING_ALARM);
     verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository, times(1)).getAlarmStatus();
+    verify(securityRepository, times(0)).setAlarmStatus(AlarmStatus.PENDING_ALARM);
+    verify(displayPanel, times(0)).notify(AlarmStatus.PENDING_ALARM);
     assertFalse(mockSensor.getActive());
   }
   @Test
   public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndActiveIsFalse() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
-    mockSensor.setActive(false);
     securityService.changeSensorActivationStatus(mockSensor,false);
 
     verify(securityRepository,times(0)).getArmingStatus();
@@ -154,15 +237,33 @@ public class SecurityServiceTest extends TestCase {
   }
 
   @Test
+  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndActiveIsFalseAndHavingActiveSensors() {
+    var mockSensor =new Sensor("dummy",SensorType.DOOR);
+    var mockActiveSensor =new Sensor("dummy2",SensorType.DOOR);
+    mockSensor.setActive(true);
+    mockActiveSensor.setActive(true);
+    when(securityRepository.getSensors()).thenReturn(Set.of(mockSensor,mockActiveSensor));
+    when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
+
+    securityService.changeSensorActivationStatus(mockSensor,false);
+
+    verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository,times(1)).getAlarmStatus();
+    verify(securityRepository,times(0)).getArmingStatus();
+    assertFalse(mockSensor.getActive());
+  }
+
+  @Test
   public void testChangeSensorActivationStatusWhenSensorActiveAndActiveIsTrue() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
+    when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
     mockSensor.setActive(true);
     securityService.changeSensorActivationStatus(mockSensor,true);
 
-    verify(securityRepository,times(0)).getArmingStatus();
-    verify(securityRepository,times(0)).getAlarmStatus();
     verify(securityRepository,times(1)).updateSensor(mockSensor);
+    verify(securityRepository,times(1)).getArmingStatus();
+    verify(securityRepository,times(0)).getAlarmStatus();
     assertTrue(mockSensor.getActive());
   }
 
@@ -200,9 +301,25 @@ public class SecurityServiceTest extends TestCase {
 
     securityService.processImage(image);
 
-    verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.NO_ALARM);
-    verify(displayPanel, times(1)).notify(AlarmStatus.NO_ALARM);
+    verify(securityRepository, times(0)).setAlarmStatus(AlarmStatus.NO_ALARM);
+    verify(displayPanel, times(0)).notify(AlarmStatus.NO_ALARM);
     verify(displayPanel,times(1)).catDetected(true);
+  }
+
+  @Test
+  public void testProcessImageWhenImageDoesNotContainsCatAndHavingActiveSensors() {
+    var image = new BufferedImage(1, 2, 3);
+    var mockSensor = Mockito.mock(Sensor.class);
+    when(mockSensor.getActive()).thenReturn(true);
+    when(imageService.imageContainsCat(any(image.getClass()),anyFloat())).thenReturn(false);
+    when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
+    when(securityRepository.getSensors()).thenReturn(Set.of(mockSensor));
+
+    securityService.processImage(image);
+
+    verify(securityRepository, times(0)).setAlarmStatus(AlarmStatus.NO_ALARM);
+    verify(displayPanel, times(0)).notify(AlarmStatus.NO_ALARM);
+    verify(displayPanel,times(1)).catDetected(false);
   }
 
   @Test
