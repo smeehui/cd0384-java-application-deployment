@@ -1,10 +1,9 @@
-package com.udacity.catpoint.test.service;
+package com.udacity.catpoint.service;
 
 import com.udacity.catpoint.application.DisplayPanel;
 import com.udacity.catpoint.application.ImagePanel;
 import com.udacity.catpoint.application.StatusListener;
 import com.udacity.catpoint.data.*;
-import com.udacity.catpoint.service.SecurityService;
 import com.udacity.image.service.FakeImageService;
 import junit.framework.TestCase;
 import org.junit.jupiter.api.BeforeEach;
