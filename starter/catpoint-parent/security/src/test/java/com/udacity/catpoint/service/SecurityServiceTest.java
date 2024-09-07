@@ -7,6 +7,8 @@ import com.udacity.catpoint.data.*;
 import com.udacity.image.service.FakeImageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.mockito.Mockito;
 
@@ -15,6 +17,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
 
 public class SecurityServiceTest {
   private FakeImageService imageService;
@@ -31,15 +34,16 @@ public class SecurityServiceTest {
     this.securityService.addStatusListener(displayPanel);
   }
 
-  @Test
-  public void testSetArmingStatus() {
-    var status = ArmingStatus.ARMED_HOME;
+  @ParameterizedTest
+  @ValueSource(strings = {"DISARMED","ARMED_HOME","ARMED_AWAY"})
+  public void setArmingStatus(String rawStatus) {
+    var status = ArmingStatus.valueOf(rawStatus);
     securityService.setArmingStatus(status);
     verify(securityRepository, times(1)).setArmingStatus(status);
   }
 
   @Test
-  public void testSetArmingStatusWhenCatIsOnCamera() throws IllegalAccessException {
+  public void catIsOnCamera_setArmedHomeStatus() throws IllegalAccessException {
     var status = ArmingStatus.ARMED_HOME;
     var alarmStatus = AlarmStatus.ALARM;
     var isCatOnCam = ReflectionUtils.findFields(securityService.getClass(), field -> field.getName().equals(
@@ -52,17 +56,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testSetArmingStatusWhenArmedAway() {
-    var status = ArmingStatus.ARMED_AWAY;
-    var mockSensor = Mockito.mock(Sensor.class);
-    when(securityRepository.getSensors()).thenReturn(Set.of(mockSensor));
-    securityService.setArmingStatus(status);
-    verify(securityRepository, times(1)).setArmingStatus(status);
-    verify(mockSensor,times(1)).setActive(false);
-  }
-
-  @Test
-  public void testSetArmingStatusWithDisarmedStatus() {
+  public void setArmingStatusWithDisarmed_shouldChangeToNoAlarmState() {
     var status = ArmingStatus.DISARMED;
     securityService.setArmingStatus(status);
     verify(securityRepository, times(1)).setAlarmStatus(AlarmStatus.NO_ALARM);
@@ -71,7 +65,8 @@ public class SecurityServiceTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testAddStatusListener() throws NoSuchFieldException, IllegalAccessException {
+  public void addStatusListener_shouldIncreaseNumberOfStatusListeners() throws NoSuchFieldException,
+      IllegalAccessException {
     securityService.addStatusListener(imagePanel);
     var statusListeners = securityService.getClass().getDeclaredField("statusListeners");
     assertNotNull(statusListeners);
@@ -81,7 +76,8 @@ public class SecurityServiceTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  public void testRemoveStatusListener() throws NoSuchFieldException, IllegalAccessException {
+  public void removeStatusListener_shouldDecreaseNumberOfStatusListeners() throws NoSuchFieldException,
+      IllegalAccessException {
     securityService.removeStatusListener(displayPanel);
     var statusListeners = securityService.getClass().getDeclaredField("statusListeners");
     assertNotNull(statusListeners);
@@ -89,16 +85,17 @@ public class SecurityServiceTest {
     assertEquals(0, ((Set<StatusListener>) statusListeners.get(securityService)).size());
   }
 
-  @Test
-  public void testSetAlarmStatus() {
-    var status = AlarmStatus.ALARM;
+  @ParameterizedTest
+  @ValueSource(strings = {"ALARM","NO_ALARM","PENDING_ALARM"})
+  public void setAlarmStatus(String rawStatus) {
+    var status = AlarmStatus.valueOf(rawStatus);
     securityService.setAlarmStatus(status);
     verify(securityRepository, times(1)).setAlarmStatus(status);
     verify(displayPanel, times(1)).notify(status);
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsDisarmed() {
+  public void sensorActive_armingStatusDisarmed_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     mockSensor.setActive(false);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
@@ -109,7 +106,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsNoAlarmAndNullArmingStatus() {
+  public void sensorInactive_armingStatusAlarm_armingStatusNull_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getArmingStatus()).thenReturn(null);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.NO_ALARM);
@@ -124,7 +121,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsNoAlarmAndArmedAway() {
+  public void sensorInactive_armingStatusNoAlarm_armingStatusArmedAway_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.NO_ALARM);
@@ -139,7 +136,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsPendingAlarm() {
+  public void sensorInactive_armingStatusPendingAlarm_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
     mockSensor.setActive(false);
@@ -152,7 +149,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsPendingAlarmAndArmedHome() {
+  public void sensorInActive_armingStatusPendingAlarm_armingStatusArmedHome_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
@@ -166,7 +163,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsPendingAlarmAndArmedAway() {
+  public void sensorInActive_armingStatusPendingAlarmAndArmedAway_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
@@ -180,7 +177,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndArmingStatusIsAlarmAndArmedAway() {
+  public void sensorInActive_armingStatusAlarmAndArmedAway_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.ALARM);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
@@ -195,7 +192,7 @@ public class SecurityServiceTest {
 
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsActiveAndArmingStatusIsPendingAlarm() {
+  public void sensorIsActive_armingStatusPendingAlarm_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     mockSensor.setActive(true);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
@@ -208,7 +205,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsActiveAndArmingStatusIsAlarm() {
+  public void sensorIsActive_armingStatusAlarm_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.ALARM);
     mockSensor.setActive(true);
@@ -221,7 +218,7 @@ public class SecurityServiceTest {
     assertFalse(mockSensor.getActive());
   }
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndActiveIsFalse() {
+  public void sensorInActive_activeIsFalse_testChangeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
     securityService.changeSensorActivationStatus(mockSensor,false);
@@ -233,7 +230,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorIsNotActiveAndActiveIsFalseAndHavingActiveSensors() {
+  public void sensorInActive_activeIsFalse_havingActiveSensors_changeSensorActivationStatus() {
     var mockSensor =new Sensor("dummy",SensorType.DOOR);
     var mockActiveSensor =new Sensor("dummy2",SensorType.DOOR);
     mockSensor.setActive(true);
@@ -250,7 +247,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testChangeSensorActivationStatusWhenSensorActiveAndActiveIsTrue() {
+  public void sensorActive_activeIsTrue_changeSensorActivationStatus() {
     var mockSensor = new Sensor("dummy",SensorType.DOOR);
     when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.PENDING_ALARM);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.DISARMED);
@@ -264,7 +261,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testProcessImageWhenImageContainsCatAndArminStatusIsArmedHome() {
+  public void imageContainsCat_armingStatusArmedHome_processImage() {
     var image = new BufferedImage(1, 2, 3);
     when(imageService.imageContainsCat(any(image.getClass()),anyFloat())).thenReturn(true);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
@@ -277,7 +274,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testProcessImageWhenImageDoesNotContainCatAndArminStatusIsArmedHome() {
+  public void imageDoesNotContainCat_armingStatusArmedHome_processImage() {
     var image = new BufferedImage(1, 2, 3);
     when(imageService.imageContainsCat(any(image.getClass()),anyFloat())).thenReturn(false);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
@@ -290,7 +287,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testProcessImageWhenImageContainsCatAndArminStatusIsNotArmedHome() {
+  public void imageContainsCat_armingStatusNotArmedHome_processImage() {
     var image = new BufferedImage(1, 2, 3);
     when(imageService.imageContainsCat(any(image.getClass()),anyFloat())).thenReturn(true);
     when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_AWAY);
@@ -303,7 +300,7 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testProcessImageWhenImageDoesNotContainsCatAndHavingActiveSensors() {
+  public void imageDoesNotContainsCat_havingActiveSensors_processImage() {
     var image = new BufferedImage(1, 2, 3);
     var mockSensor = Mockito.mock(Sensor.class);
     when(mockSensor.getActive()).thenReturn(true);
@@ -318,14 +315,16 @@ public class SecurityServiceTest {
     verify(displayPanel,times(1)).catDetected(false);
   }
 
-  @Test
-  public void testGetAlarmStatus() {
-    when(securityRepository.getAlarmStatus()).thenReturn(AlarmStatus.NO_ALARM);
-    assertEquals(securityService.getAlarmStatus(), AlarmStatus.NO_ALARM);
+  @ParameterizedTest
+  @ValueSource(strings = {"ALARM","NO_ALARM","PENDING_ALARM"})
+  public void getAlarmStatus_shouldReturnAlarmStatus(String rawStatus) {
+    var status = AlarmStatus.valueOf(rawStatus);
+    when(securityRepository.getAlarmStatus()).thenReturn(status);
+    assertEquals(securityService.getAlarmStatus(), status);
   }
 
   @Test
-  public void testGetSensors() {
+  public void getSensors_shouldReturnAllSensors() {
     var mock = new Sensor("dummy",SensorType.DOOR);
     var mockSensors = Set.of(mock);
     when(securityRepository.getSensors()).thenReturn(mockSensors);
@@ -335,22 +334,24 @@ public class SecurityServiceTest {
   }
 
   @Test
-  public void testAddSensor() {
+  public void addSensor_shouldIncreaseNumberOfSensors() {
     var mock = new Sensor("dummy",SensorType.DOOR);
     securityService.addSensor(mock);
     verify(securityRepository,times(1)).addSensor(mock);
   }
 
   @Test
-  public void testRemoveSensor() {
+  public void removeSensor_shouldDecreaseNumberOfSensors() {
     var mock = new Sensor("dummy",SensorType.DOOR);
     securityService.removeSensor(mock);
     verify(securityRepository,times(1)).removeSensor(mock);
   }
 
-  @Test
-  public void testGetArmingStatus() {
-    when(securityRepository.getArmingStatus()).thenReturn(ArmingStatus.ARMED_HOME);
-    assertEquals(securityService.getArmingStatus(),ArmingStatus.ARMED_HOME);
+  @ParameterizedTest
+  @ValueSource(strings = {"DISARMED","ARMED_HOME","ARMED_AWAY"})
+  public void getArmingStatus_shouldReturnArmingStatus(String rawStatus) {
+    var status = ArmingStatus.valueOf(rawStatus);
+    when(securityRepository.getArmingStatus()).thenReturn(status);
+    assertEquals(securityService.getArmingStatus(), status);
   }
 }

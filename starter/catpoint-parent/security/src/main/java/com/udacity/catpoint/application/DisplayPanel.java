@@ -2,7 +2,7 @@ package com.udacity.catpoint.application;
 
 import com.udacity.catpoint.data.AlarmStatus;
 import com.udacity.catpoint.service.SecurityService;
-import com.udacity.image.service.StyleService;
+import com.udacity.catpoint.service.StyleService;
 import net.miginfocom.swing.MigLayout;
 
 import javax.swing.*;
@@ -13,7 +13,7 @@ import javax.swing.*;
  */
 public class DisplayPanel extends JPanel implements StatusListener {
 
-    private JLabel currentStatusLabel;
+    private final JLabel currentStatusLabel;
 
     public DisplayPanel(SecurityService securityService) {
         super();

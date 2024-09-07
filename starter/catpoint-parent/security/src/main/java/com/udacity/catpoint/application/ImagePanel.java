@@ -2,7 +2,7 @@ package com.udacity.catpoint.application;
 
 import com.udacity.catpoint.data.AlarmStatus;
 import com.udacity.catpoint.service.SecurityService;
-import com.udacity.image.service.StyleService;
+import com.udacity.catpoint.service.StyleService;
 import net.miginfocom.swing.MigLayout;
 
 import javax.imageio.ImageIO;
@@ -16,14 +16,14 @@ import java.io.IOException;
  * by uploading their own picture, and 'scan' the picture, sending it for image analysis
  */
 public class ImagePanel extends JPanel implements StatusListener {
-    private SecurityService securityService;
+    private final SecurityService securityService;
 
-    private JLabel cameraHeader;
-    private JLabel cameraLabel;
+    private final JLabel cameraHeader;
+    private final JLabel cameraLabel;
     private BufferedImage currentCameraImage;
 
-    private int IMAGE_WIDTH = 300;
-    private int IMAGE_HEIGHT = 225;
+    private final int IMAGE_WIDTH = 300;
+    private final int IMAGE_HEIGHT = 225;
 
     public ImagePanel(SecurityService securityService) {
         super();

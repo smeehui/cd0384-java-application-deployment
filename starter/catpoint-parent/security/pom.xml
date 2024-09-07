@@ -37,6 +37,13 @@
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.miglayout/miglayout-swing -->
+        <dependency>
+            <groupId>com.miglayout</groupId>
+            <artifactId>miglayout-swing</artifactId>
+            <version>5.0</version>
+        </dependency>
     </dependencies>
     <build>
         <plugins>

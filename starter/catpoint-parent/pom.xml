@@ -32,6 +32,13 @@
     <scope>test</scope>
   </dependency>
 
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>5.11.0-M2</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- https://mvnrepository.com/artifact/org.mockito/mockito-junit-jupiter -->
     <dependency>
       <groupId>org.mockito</groupId>
@@ -91,14 +98,8 @@
         </plugin>
 
         <plugin>
-
           <artifactId>maven-surefire-plugin</artifactId>
           <version>3.1.2</version>
-          <configuration>
-            <argLine>
-              --add-opens securityService/com.udacity.catpoint.security.service=ALL-UNNAMED
-            </argLine>
-          </configuration>
         </plugin>
 
       </plugins>
